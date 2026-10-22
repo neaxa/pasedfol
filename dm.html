@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}دایرکت{% endblock %}
+{% block body %}
+<h1>ربات پاسخ دایرکت <span class="badge {{ 'b-on' if running else 'b-gray' }}">{{ 'روشن' if running else 'خاموش' }}</span></h1>
+<div class="card">
+<div class="row" style="margin-top:-14px">
+<form method="post" action="/bot/start"><input type="hidden" name="csrf" value="{{ csrf }}"><button>روشن کردن</button></form>
+<form method="post" action="/bot/stop"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="red">خاموش کردن</button></form></div>
+<small>ربات سبک نوشتن تو را از پیام‌های قبلی‌ات یاد می‌گیرد. کلید AI این بخش را در «تنظیمات AI ← پاسخ دایرکت» بگذار. اگر ربات از کار بیفتد پنل دوباره روشنش می‌کند.</small></div>
+
+<form method="post" action="/dm/save" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<h2>تنظیمات</h2>
+<label>حالت<select name="mode">
+<option value="draft" {{ 'selected' if dm.mode=='draft' }}>پیش‌نویس (پیشنهاد جواب فقط همین‌جا نشان داده می‌شود)</option>
+<option value="auto" {{ 'selected' if dm.mode=='auto' }}>خودکار (مستقیم به طرف مقابل جواب بده)</option></select></label>
+<label class="check"><input type="checkbox" name="reply_in_groups" {{ 'checked' if dm.reply_in_groups }}> در گروه‌ها هم جواب بده</label>
+<label class="check"><input type="checkbox" name="disclose" {{ 'checked' if dm.disclose }}> به انتهای پیام «(پاسخ خودکار)» اضافه کن</label>
+<div class="grid" style="gap:12px">
+<label>هر چند ثانیه دایرکت چک شود <small>(از ۵ تا ۶۰۰ ثانیه)</small><input type="number" min="5" max="600" name="poll_seconds" id="poll" value="{{ dm.poll_seconds }}"></label>
+
+<label>سقف پاسخ خودکار در ساعت<input type="number" min="1" max="500" name="max_replies_per_hour" value="{{ dm.max_replies_per_hour }}"></label>
+<div class="banner" id="pollwarn" style="display:none;grid-column:1/-1;margin:0">چک کردن دایرکت هر چند ثانیه یک‌بار (به‌خصوص زیر ۲۰ ثانیه) درخواست‌های زیادی به اینستاگرام می‌فرستد و ریسک محدود شدن یا خروج حساب را بالا می‌برد. اگر اینستاگرام محدودیت بدهد ربات خودش ۱۰ دقیقه صبر می‌کند.</div></div>
+<label>نام کاربری‌هایی که هرگز جواب خودکار نگیرند <small>(هر خط یکی)</small><textarea name="blocklist" rows="3" class="ltr">{{ dm.blocklist|join('\n') }}</textarea></label>
+<button>ذخیره</button></form>
+<script>
+(function(){var i=document.getElementById('poll'),w=document.getElementById('pollwarn');
+function s(){w.style.display=(parseInt(i.value,10)<20)?'block':'none';}i.addEventListener('input',s);s();})();
+</script>
+
+<div class="card"><h2>پیش‌نویس‌های پیشنهادی</h2>
+{% for d in drafts %}<div class="list-item"><div class="grow"><small>@{{ d.user }}</small><div>پیام: {{ d.message }}</div><div><b>پیشنهاد:</b> {{ d.suggestion }}</div></div></div>
+{% else %}<small>هنوز پیش‌نویسی نیست. وقتی ربات روشن باشد و پیام تازه برسد، اینجا می‌آید.</small>{% endfor %}</div>
+
+<div class="card"><h2>لاگ ربات</h2><div class="pre">{{ log }}</div></div>
+{% endblock %}

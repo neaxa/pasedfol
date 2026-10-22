@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}کامنت خودکار{% endblock %}
+{% block head %}<style>
+.tgt{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}
+.tgt:last-child{border:0}.tgt .grow{flex:1;min-width:0}
+.tgt img{width:64px;height:84px;border-radius:10px;object-fit:cover;background:var(--bg);border:1px solid var(--line);flex:none}
+.stats{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin:2px 0 6px}
+.tgt .row{margin:0}.tgt .row>*{margin-top:4px}.tgt button{margin-top:4px;padding:6px 14px}
+.tgt textarea{min-height:56px;margin-top:6px}
+.cmt{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-top:6px}
+.b-found,.b-pending{background:var(--info-bg);color:var(--info)}.b-queued{background:var(--vio-bg);color:var(--vio)}
+.b-running{background:var(--warn-bg);color:var(--warn)}.b-done{background:var(--ok-bg);color:var(--ok)}.b-skipped{background:var(--bg);color:var(--mute);border:1px solid var(--line)}
+</style>{% endblock %}
+{% block body %}
+<h1>کامنت خودکار</h1>
+<p class="mute">پست‌های پربازدید یا پرکامنتِ یک موضوع (یا پیج‌ها و لینک‌هایی که خودت می‌گویی) پیدا می‌شود و زیرشان یک کامنتِ طبیعی گذاشته می‌شود؛ یا با AI بر اساس جهتی که تو می‌دهی، یا از بین کامنت‌های دست‌نویس خودت.</p>
+<div class="banner">کامنت‌گذاری خودکار حساس‌ترین کار برای اینستاگرام است و زیاده‌روی در آن باعث محدود شدن حساب می‌شود. به همین دلیل پیش‌فرض «اول به من نشان بده، من تأیید می‌کنم» است، سقف روزانه (حداکثر ۴۰) و ساعتی اعمال می‌شود، بین کامنت‌ها فاصله‌ی تصادفی هست، و اگر اینستاگرام محدودیت بدهد همه‌چیز خودکار چند ساعت متوقف می‌شود. با تعداد کم شروع کن.</div>
+{% if st.paused %}<div class="banner">اینستاگرام محدودیت موقت داده؛ کارهای خودکار تا <bdo dir="ltr">{{ st.paused }}</bdo> متوقف است.</div>{% endif %}
+{% if not st.ig_ok %}<div class="banner">به اینستاگرام وصل نیستی. <a href="/instagram">اتصال اینستاگرام ←</a></div>{% endif %}
+
+<div class="grid" style="margin-bottom:16px">
+  <div class="card"><div class="mute">امروز گذاشته شد</div><div class="stat">{{ today_done }} <small>از {{ g.max_per_day }}</small></div></div>
+  <div class="card"><div class="mute">وضعیت</div>
+    <div class="stat"><span class="badge {{ 'b-on' if g.enabled else 'b-gray' }}">{{ 'جست‌وجوی خودکار روشن' if g.enabled else 'جست‌وجوی خودکار خاموش' }}</span></div>
+    <small>حالت: {{ 'ارسال خودکار' if g.mode == 'auto' else 'با تأیید من' }}</small></div>
+</div>
+
+<form method="post" action="/comments/add" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<h2>زیر این پست‌ها کامنت بگذار</h2>
+<label>لینک پست‌ها یا ریلزها <small>(هر خط یک لینک اینستاگرام)</small>
+<textarea name="urls" rows="3" class="ltr" placeholder="https://www.instagram.com/p/..."></textarea></label>
+<label>متن کامنت <small>(اگر خالی بگذاری طبق «سبک کامنت» پایین ساخته می‌شود؛ اگر بنویسی همان بدون تغییر گذاشته می‌شود)</small>
+<textarea name="text" rows="2" maxlength="300"></textarea></label>
+<button>اضافه به صف</button>
+</form>
+
+<div class="card"><h2>صف کامنت‌ها</h2>
+<div class="row" style="margin:0 0 8px">
+<form method="post" action="/comments/scan"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost" style="margin:0" {{ 'disabled' if st.scanning }}>{% if st.scanning %}<span class="spin"></span>در حال جست‌وجو…{% else %}همین الان بگرد و کامنت آماده کن{% endif %}</button></form>
+{% if st.last and not st.scanning %}<span class="mute" style="margin:0">آخرین جست‌وجو: {{ st.last }}</span>{% endif %}
+</div>
+{% for t in rows %}
+<div class="tgt">
+  {% if t.thumb %}<img src="{{ t.thumb }}" referrerpolicy="no-referrer" loading="lazy" alt="" onerror="this.style.visibility='hidden'">{% else %}<span style="width:64px"></span>{% endif %}
+  <div class="grow">
+    <div><b dir="ltr">@{{ t.author }}</b> · {{ G_KIND[t.kind] }} <span class="badge b-{{ t.status }}">{{ G_STATUS[t.status] }}</span></div>
+    <div class="stats">{% if t.views %}<span>👁 {{ t.views|num }}</span>{% endif %}<span>❤ {{ t.likes|num }}</span><span>💬 {{ t.comments|num }}</span>{% if t.taken_at %}<span>{{ t.taken_at|ago }}</span>{% endif %}{% if t.topic %}<span>{{ t.topic if t.topic.startswith('@') or t.topic == 'link' else '#' ~ t.topic }}</span>{% endif %}
+      {% if t.code %}<a href="https://www.instagram.com/{{ 'reel' if t.kind == 'reel' else 'p' }}/{{ t.code }}/" target="_blank" rel="noopener noreferrer">مشاهده ↗</a>{% endif %}</div>
+    {% if t.status in ('pending','failed') %}
+    <form method="post" action="/comments/{{ t.id }}/approve"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <textarea name="text" maxlength="300">{{ t.text }}</textarea>
+      <div class="row"><button class="ok">{{ 'تأیید و ارسال' if t.status == 'pending' else 'تلاش دوباره' }}</button></div>
+    </form>
+    {% else %}<div class="cmt">{{ t.text }}</div>{% endif %}
+    {% if t.error %}<small style="color:var(--bad)">{{ t.error }}</small>{% endif %}
+    {% if t.status in ('pending','queued','failed') %}
+    <form method="post" action="/comments/{{ t.id }}/skip"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost">رد کن</button></form>
+    {% endif %}
+  </div>
+</div>
+{% else %}<small>صف خالی است. بالا لینک بده یا «همین الان بگرد» را بزن.</small>{% endfor %}
+</div>
+
+<form method="post" action="/comments/save" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<h2>تنظیمات</h2>
+<label class="check"><input type="checkbox" name="enabled" {{ 'checked' if g.enabled }}> جست‌وجوی خودکار پست‌ها روشن باشد</label>
+
+<div class="grid" style="gap:12px">
+<label>موضوع‌ها <small>(هر خط یک موضوع یا هشتگ؛ پست‌های پربازدیدشان پیدا می‌شود)</small>
+<textarea name="topics" rows="4">{{ g.topics|join('\n') }}</textarea></label>
+<label>پیج‌های هدف <small>(اختیاری؛ هر خط یک نام کاربری. زیر تازه‌ترین پست‌هایشان کامنت می‌گذارد، بدون آستانه)</small>
+<textarea name="accounts" rows="4" class="ltr">{{ g.accounts|join('\n') }}</textarea></label>
+</div>
+
+<label>سبک کامنت</label>
+<div class="seg">
+<label><input type="radio" name="style" value="ai" {{ 'checked' if g.style == 'ai' }}> با AI</label>
+<label><input type="radio" name="style" value="manual" {{ 'checked' if g.style == 'manual' }}> از کامنت‌های دست‌نویس من</label>
+<label><input type="radio" name="style" value="both" {{ 'checked' if g.style == 'both' }}> ترکیبی</label>
+</div>
+<label>جهت و موضوع کامنت‌ها برای AI <small>(مثال: «از نگاه یک مربی تناسب اندام، تشویق‌کننده و کاربردی؛ بدون تبلیغ»)</small>
+<textarea name="ai_brief" rows="3">{{ g.ai_brief }}</textarea></label>
+<label>کامنت‌های دست‌نویس من <small>(هر خط یک کامنت؛ کم‌استفاده‌ترین هر بار انتخاب می‌شود. حداقل ۵ تا ۱۰ تا بنویس. می‌توانی {author} بگذاری تا نام صاحب پست جایش بنشیند)</small>
+<textarea name="manual_comments" rows="5">{{ g.manual_comments|join('\n') }}</textarea></label>
+
+<label>بعد از ساخت کامنت چه شود؟</label>
+<div class="seg">
+<label><input type="radio" name="mode" value="review" {{ 'checked' if g.mode != 'auto' }}> نشانم بده، من تأیید می‌کنم (توصیه‌شده)</label>
+<label><input type="radio" name="mode" value="auto" {{ 'checked' if g.mode == 'auto' }}> خودکار گذاشته شود</label>
+</div>
+
+<label>نوع محتوا</label>
+<div class="seg">{% for k, label in [('reel','ریلز'),('post','پست')] %}<label><input type="checkbox" name="types" value="{{ k }}" {{ 'checked' if k in g.types }}> {{ label }}</label>{% endfor %}</div>
+<label>از کجا بگردد؟</label>
+<div class="seg">{% for k, label in [('top','برترین‌های هشتگ'),('recent','تازه‌ترین‌ها'),('both','هر دو')] %}<label><input type="radio" name="sources" value="{{ k }}" {{ 'checked' if g.sources == k }}> {{ label }}</label>{% endfor %}</div>
+
+<p class="hint" style="margin:14px 0 0">پست وقتی هدف حساب می‌شود که <b>هرکدام</b> از این آستانه‌ها را داشته باشد (۰ = نادیده گرفته شود):</p>
+<div class="grid" style="gap:12px">
+<label>حداقل بازدید<input type="number" name="min_views" min="0" value="{{ g.min_views }}"></label>
+<label>حداقل لایک<input type="number" name="min_likes" min="0" value="{{ g.min_likes }}"></label>
+<label>حداقل کامنت<input type="number" name="min_comments" min="0" value="{{ g.min_comments }}"></label>
+<label>حداکثر قدمت پست (روز)<input type="number" name="max_age_days" min="0" max="365" value="{{ g.max_age_days }}"></label>
+</div>
+
+<p class="hint" style="margin:14px 0 0">سقف‌ها و زمان‌بندی (برای حفظ حساب):</p>
+<div class="grid" style="gap:12px">
+<label>سقف کامنت در روز (حداکثر ۴۰)<input type="number" name="max_per_day" min="1" max="40" value="{{ g.max_per_day }}"></label>
+<label>سقف کامنت در ساعت<input type="number" name="max_per_hour" min="1" max="10" value="{{ g.max_per_hour }}"></label>
+<label>حداقل فاصله‌ی دو کامنت (ثانیه)<input type="number" name="min_gap_seconds" min="60" max="7200" value="{{ g.min_gap_seconds }}"></label>
+<label>هر چند دقیقه یک بار پست جدید بگردد<input type="number" name="scan_every_minutes" min="30" max="1440" value="{{ g.scan_every_minutes }}"></label>
+<label>در هر جست‌وجو چند کامنت آماده شود<input type="number" name="per_scan" min="1" max="5" value="{{ g.per_scan }}"></label>
+<label>ساعت کاری: از<input type="number" name="hours_from" min="0" max="23" value="{{ g.hours_from }}"></label>
+<label>تا<input type="number" name="hours_to" min="1" max="24" value="{{ g.hours_to }}"></label>
+</div>
+
+<label>پیج‌هایی که هرگز زیرشان کامنت نگذارد <small>(هر خط یک نام کاربری)</small>
+<textarea name="blocklist" rows="2" class="ltr">{{ g.blocklist|join('\n') }}</textarea></label>
+<label class="check"><input type="checkbox" name="ai_expand" {{ 'checked' if g.ai_expand }}> AI هشتگ‌های مرتبط با موضوع را هم پیشنهاد بدهد</label>
+<button>ذخیره</button>
+</form>
+{% endblock %}

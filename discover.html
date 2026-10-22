@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}کشف و استوری{% endblock %}
+{% block head %}<style>
+.tgt{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}
+.tgt:last-child{border:0}.tgt .grow{flex:1;min-width:0}
+.tgt img{width:72px;height:96px;border-radius:10px;object-fit:cover;background:var(--bg);border:1px solid var(--line);flex:none}
+.stats{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin:2px 0 6px}
+.tgt .row{margin:0}.tgt .row>*{margin-top:4px}.tgt button{margin-top:4px;padding:6px 14px}
+.b-found,.b-pending{background:var(--info-bg);color:var(--info)}.b-queued{background:var(--vio-bg);color:var(--vio)}
+.b-running{background:var(--warn-bg);color:var(--warn)}
+.looks{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-top:8px}
+.look{margin:0;border:2px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;background:var(--bg);display:flex;flex-direction:column;gap:6px}
+.look input{position:absolute;opacity:0;pointer-events:none}.look:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 3px #5b4ff522}
+.mock{width:78px;height:138px;border-radius:12px;background:linear-gradient(160deg,#5b4ff5,#ee5862);position:relative;overflow:hidden;align-self:center;margin-bottom:4px}
+.m-full{position:absolute;inset:22px 0;background:linear-gradient(135deg,#ffd27a,#ff7aa2)}
+.m-tag{position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:8px;background:#0008;color:#fff;border-radius:9px;padding:0 5px;direction:ltr}
+.m-card{position:absolute;inset:16px 9px;background:#fff;border-radius:8px;display:flex;flex-direction:column;gap:3px;padding:4px}
+.m-head{height:8px;width:60%;background:#ddd;border-radius:4px}.m-img{flex:1;background:linear-gradient(135deg,#ffd27a,#ff7aa2);border-radius:4px}
+.m-btn{height:10px;background:#5b4ff5;border-radius:6px}.b-done{background:var(--ok-bg);color:var(--ok)}.b-skipped{background:var(--bg);color:var(--mute);border:1px solid var(--line)}
+</style>{% endblock %}
+{% block body %}
+<h1>کشف و استوری</h1>
+<p class="mute">موضوع را می‌دهی؛ پنل در اینستاگرام دنبال بهترین ریلز و پست‌های پربازدید همان موضوع می‌گردد و هرکدام را که بخواهی (یا خودکار) در استوری‌ات می‌گذارد، با نام صاحب پست.</p>
+{% if st.paused %}<div class="banner">اینستاگرام محدودیت موقت داده؛ کارهای خودکار تا <bdo dir="ltr">{{ st.paused }}</bdo> متوقف است.</div>{% endif %}
+{% if not st.ig_ok %}<div class="banner">به اینستاگرام وصل نیستی. <a href="/instagram">اتصال اینستاگرام ←</a></div>{% endif %}
+
+<form method="post" action="/discover/look" class="card" id="look"><input type="hidden" name="csrf" value="{{ csrf }}">
+<h2>شکل استوری</h2>
+<div class="looks">
+<label class="look"><input type="radio" name="style" value="full" {{ 'checked' if g.style != 'card' }}>
+  <span class="mock"><span class="m-full"></span><span class="m-tag">@page</span></span>
+  <b>حالت اول: نمایش کامل</b><small>کل عکس یا ویدیو داخل خود استوری نشان داده و پخش می‌شود و همان‌جا دیده می‌شود (ویدیو با صدای خودش، حداکثر ۶۰ ثانیه)، با نام صاحب پست.</small></label>
+<label class="look"><input type="radio" name="style" value="card" {{ 'checked' if g.style == 'card' }}>
+  <span class="mock"><span class="m-card"><span class="m-head"></span><span class="m-img"></span><span class="m-btn"></span></span></span>
+  <b>حالت دوم: کارت پیش‌نمایش</b><small>پست به‌شکل یک کارت (کاور + نام صاحب پست + «برای دیدن بزن») داخل استوری می‌آید و با زدن روی آن پست اصلی باز می‌شود.</small></label>
+</div>
+<label class="check"><input type="checkbox" name="add_link" {{ 'checked' if g.add_link }}> استیکر لینک پست اصلی هم گذاشته شود <small>(اگر اینستاگرام برای حسابت لینک را قبول نکرد، خاموشش کن)</small></label>
+
+<h2 style="margin-top:22px">استوری خودکار پست‌های جدید خودت</h2>
+<label class="check"><input type="checkbox" name="share_own" {{ 'checked' if g.share_own }}> هر پست یا ریلز جدیدی که در پیجم گذاشته می‌شود، خودکار استوری هم بشود</label>
+<small style="display:block">با همان شکلی که بالا انتخاب کردی. پست‌هایی که از همین پنل منتشر می‌شوند بلافاصله، و پست‌هایی که از خود اپ اینستاگرام می‌گذاری حداکثر تا نیم ساعت بعد استوری می‌شوند. پست‌های قدیمی (قبل از روشن کردن) استوری نمی‌شوند.</small>
+<div class="seg">{% for k, label in [('post','پست'),('reel','ریلز')] %}<label><input type="checkbox" name="share_own_kinds" value="{{ k }}" {{ 'checked' if k in g.share_own_kinds }}> {{ label }}</label>{% endfor %}</div>
+<label>چند دقیقه بعد از انتشار استوری شود<input type="number" name="share_own_delay_minutes" min="0" max="240" value="{{ g.share_own_delay_minutes }}" style="max-width:160px"></label>
+<button>ذخیره</button>
+</form>
+
+<form method="post" action="/discover/search" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<h2>جست‌وجوی دستی</h2>
+<label>موضوع <small>(مثال: رنگ مو، تناسب اندام، fitness، #دکوراسیون)</small>
+<input name="topic" maxlength="100" placeholder="موضوعی که دنبال پست‌های خوبش هستی" required></label>
+<small>آستانه‌های پربازدید بودن را از تنظیمات پایین می‌خواند.</small><br>
+<button {{ 'disabled' if st.scanning }}>{% if st.scanning %}<span class="spin"></span>در حال جست‌وجو…{% else %}جست‌وجو{% endif %}</button>
+{% if st.last and not st.scanning %}<p class="mute" style="margin:10px 0 0">آخرین جست‌وجو: {{ st.last }}</p>{% endif %}
+</form>
+
+<div class="card"><h2>پست‌ها و ریلزهای پیدا شده</h2>
+{% for t in rows %}
+<div class="tgt">
+  {% if t.thumb %}<img src="{{ t.thumb }}" referrerpolicy="no-referrer" loading="lazy" alt="" onerror="this.style.visibility='hidden'">{% else %}<span style="width:72px"></span>{% endif %}
+  <div class="grow">
+    <div><b class="ltr" dir="ltr">@{{ t.author }}</b> · {{ G_KIND[t.kind] }} <span class="badge b-{{ t.status }}">{{ G_STATUS[t.status] }}</span>{% if t.topic == 'own' %} <span class="badge b-gray">پست خودم</span>{% endif %}</div>
+    <div class="stats">{% if t.views %}<span>👁 {{ t.views|num }}</span>{% endif %}<span>❤ {{ t.likes|num }}</span><span>💬 {{ t.comments|num }}</span>{% if t.taken_at %}<span>{{ t.taken_at|ago }}</span>{% endif %}{% if t.topic and t.topic != 'own' %}<span>#{{ t.topic }}</span>{% endif %}</div>
+    {% if t.caption %}<div class="t mute" style="white-space:normal;max-height:3.4em;overflow:hidden">{{ t.caption }}</div>{% endif %}
+    {% if t.error %}<small style="color:var(--bad)">{{ t.error }}</small>{% endif %}
+    <div class="row">
+      {% if t.code %}<a href="https://www.instagram.com/{{ 'reel' if t.kind == 'reel' else 'p' }}/{{ t.code }}/" target="_blank" rel="noopener noreferrer">مشاهده در اینستاگرام ↗</a>{% endif %}
+      {% if t.status in ('found','failed') %}
+      <form method="post" action="/discover/{{ t.id }}/story"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ok">{{ 'تلاش دوباره' if t.status == 'failed' else 'استوری کن' }}</button></form>
+      {% endif %}
+      {% if t.status in ('found','queued','failed') %}
+      <form method="post" action="/discover/{{ t.id }}/skip"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost">رد کن</button></form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% else %}<small>هنوز چیزی پیدا نشده؛ یک موضوع جست‌وجو کن.</small>{% endfor %}
+</div>
+
+<form method="post" action="/discover/save" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<h2>حالت خودکار و آستانه‌ها</h2>
+<label class="check"><input type="checkbox" name="enabled" {{ 'checked' if g.enabled }}> جست‌وجوی خودکار روشن باشد</label>
+
+<label>فهرست موضوع‌ها <small>(هر خط یک موضوع؛ هر بار یکی به نوبت جست‌وجو می‌شود)</small>
+<textarea name="topics" rows="4">{{ g.topics|join('\n') }}</textarea></label>
+
+<label>ساعت‌های جست‌وجو <small>(به وقت {{ cfg.timezone }}؛ مثال: 13:00 21:00)</small>
+<input name="times" class="ltr" value="{{ g.times|join(' ') }}"></label>
+
+<label>بعد از پیدا شدن چه شود؟</label>
+<div class="seg">
+<label><input type="radio" name="mode" value="review" {{ 'checked' if g.mode != 'auto' }}> فقط فهرست کن، خودم انتخاب می‌کنم (توصیه‌شده)</label>
+<label><input type="radio" name="mode" value="auto" {{ 'checked' if g.mode == 'auto' }}> بهترین‌ها خودکار در استوری بروند</label>
+</div>
+
+<label>نوع محتوا</label>
+<div class="seg">{% for k, label in [('reel','ریلز'),('post','پست')] %}<label><input type="checkbox" name="types" value="{{ k }}" {{ 'checked' if k in g.types }}> {{ label }}</label>{% endfor %}</div>
+
+<label>از کجا بگردد؟</label>
+<div class="seg">{% for k, label in [('top','برترین‌های هشتگ'),('recent','تازه‌ترین‌ها'),('both','هر دو')] %}<label><input type="radio" name="sources" value="{{ k }}" {{ 'checked' if g.sources == k }}> {{ label }}</label>{% endfor %}</div>
+
+<p class="hint" style="margin:14px 0 0">پست وقتی «خوب» حساب می‌شود که <b>هرکدام</b> از این آستانه‌ها را داشته باشد (۰ = نادیده گرفته شود):</p>
+<div class="grid" style="gap:12px">
+<label>حداقل بازدید<input type="number" name="min_views" min="0" value="{{ g.min_views }}"></label>
+<label>حداقل لایک<input type="number" name="min_likes" min="0" value="{{ g.min_likes }}"></label>
+<label>حداقل کامنت<input type="number" name="min_comments" min="0" value="{{ g.min_comments }}"></label>
+<label>حداکثر قدمت (روز)<input type="number" name="max_age_days" min="0" max="365" value="{{ g.max_age_days }}"></label>
+</div>
+
+<div class="grid" style="gap:12px">
+<label>در هر دور چند مورد به استوری برود (حالت خودکار)<input type="number" name="per_run" min="1" max="5" value="{{ g.per_run }}"></label>
+<label>سقف استوری خودکار در روز<input type="number" name="max_per_day" min="1" max="10" value="{{ g.max_per_day }}"></label>
+<label>حداقل فاصله‌ی بین دو استوری (دقیقه)<input type="number" name="min_gap_minutes" min="5" max="720" value="{{ g.min_gap_minutes }}"></label>
+</div>
+
+<label>پیج‌هایی که نباید از آن‌ها استوری شود <small>(هر خط یک نام کاربری)</small>
+<textarea name="blocklist" rows="2" class="ltr">{{ g.blocklist|join('\n') }}</textarea></label>
+<label class="check"><input type="checkbox" name="ai_expand" {{ 'checked' if g.ai_expand }}> AI هشتگ‌های مرتبط با موضوع را هم پیشنهاد بدهد <small>(نتایج بهتر؛ نیاز به کلید «نوشتن کپشن»)</small></label>
+<button>ذخیره</button>
+<p class="hint">اگر پیج صاحب پست خصوصی باشد یا اجازه‌ی اشتراک‌گذاری بسته باشد، اینستاگرام آن را رد می‌کند و علتش بالا نوشته می‌شود.</p>
+</form>
+{% endblock %}

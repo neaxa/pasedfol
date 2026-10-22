@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}{{ KIND_FA[p.kind] }} #{{ p.id }}{% endblock %}
+{% block body %}
+<div class="row" style="justify-content:space-between;margin-bottom:6px">
+  <h1 style="margin:14px 0 0">{{ KIND_FA[p.kind] }} #{{ p.id }} <span class="badge b-{{ p.status }}">{% if p.status in ('generating','publishing') %}<span class="spin"></span>{% endif %}{{ STATUS_FA[p.status] }}</span></h1>
+  <a href="/posts">← همه‌ی پست‌ها</a>
+</div>
+{% if p.topic %}<p class="mute" style="margin-top:0">موضوع: {{ p.topic }}{% if p.source == 'autopilot' %} · ساخته‌شده با اتوپایلوت{% elif p.source == 'million' %} · 🚀 ساخته‌شده با «میلیونیم»{% endif %}</p>{% endif %}
+{% if p.brief %}<details class="card" style="padding:12px 18px"><summary style="cursor:pointer;font-weight:700">استراتژی این محتوا (از «میلیونیم»)</summary><div style="white-space:pre-wrap;margin-top:8px" class="mute">{{ p.brief }}</div></details>{% endif %}
+
+{% if p.status in ('generating', 'publishing') %}
+<div class="card"><span class="spin"></span> {{ p.step or 'در حال انجام…' }}
+<p class="mute">این صفحه خودکار به‌روز می‌شود. می‌توانی بیرون بروی؛ کار در پس‌زمینه ادامه دارد.</p></div>
+{% endif %}
+{% if p.status == 'failed' and p.error %}<div class="flash bad">{{ p.error }}</div>{% endif %}
+{% if p.status == 'published' %}
+<div class="flash ok">منتشر شد · {{ ts(p.published_at) }}{% if p.result %} · <a href="{{ p.result }}" target="_blank" rel="noopener">مشاهده در اینستاگرام</a>{% endif %}</div>
+{% endif %}
+{% if p.status == 'scheduled' %}
+<div class="card">انتشار در <b>{{ ts(p.scheduled_at) }}</b> ({{ tz_name }})
+{% if not p.force %}<br><small>اگر سقف روزانه یا فاصله‌ی بین انتشارها پر باشد، کمی دیرتر منتشر می‌شود.</small>{% endif %}
+<form method="post" action="/post/{{ p.id }}/unschedule"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost">لغو زمان‌بندی</button></form></div>
+{% endif %}
+
+<div class="two">
+<div class="card">
+  {% if m.video %}
+    <video class="preview" controls playsinline src="/media/{{ p.id }}/{{ m.video.name }}?v={{ m.video.v }}"></video>
+  {% elif m.image %}
+    <img class="preview" src="/media/{{ p.id }}/{{ m.image.name }}?v={{ m.image.v }}" alt="">
+  {% else %}<div class="mute" style="padding:40px 0;text-align:center">هنوز تصویری نیست</div>{% endif %}
+  {% if m.audio and not m.video %}<audio controls style="width:100%;margin-top:10px" src="/media/{{ p.id }}/{{ m.audio.name }}?v={{ m.audio.v }}"></audio>{% endif %}
+  {% if p.note %}<p class="mute" style="margin:10px 0 0">{{ p.note }}</p>{% endif %}
+  {% if p.kind != 'post' and editable %}
+  <div class="row">
+  <form method="post" action="/post/{{ p.id }}/sound-toggle"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="{{ 'ghost' if p.sound else 'red' }}">{{ '🔊 با صدا · بی‌صدا شود' if p.sound else '🔇 بی‌صدا · صدادار شود' }}</button></form>
+  {% if p.sound %}
+  <form method="post" action="/post/{{ p.id }}/voice-toggle"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="ghost">{{ 'ویس خاموش شود' if p.want_voice else 'ویس روشن شود' }}</button></form>
+  {% endif %}
+  </div>
+  {% if p.sound %}
+  {% if m.music %}<div class="row"><small>🎵 موزیک پس‌زمینه گذاشته شده</small>
+    <form method="post" action="/post/{{ p.id }}/music-remove"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost" style="padding:4px 12px">حذف موزیک</button></form></div>{% endif %}
+  {% endif %}
+  {% endif %}
+</div>
+
+<div class="card">
+{% if editable %}
+<form method="post" enctype="multipart/form-data" action="/post/{{ p.id }}/save">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label>کپشن<textarea name="caption" rows="9">{{ p.caption }}</textarea></label>
+  {% if p.kind != 'post' and p.want_voice %}
+  <label>متن ویس <small>(بعد از ویرایش، «بازسازی ویس و ویدیو» را بزن)</small><textarea name="voice_text" rows="3">{{ p.voice_text }}</textarea></label>
+  {% endif %}
+  {% if not p.user_video %}<label>{{ 'توصیف ویدیو برای AI (حرکت و دوربین را هم بنویس)' if p.out_type == 'video' else 'توصیف تصویر برای AI' }} <small>(انگلیسی بهتر جواب می‌دهد)</small><textarea name="image_prompt" rows="2" class="ltr">{{ p.image_prompt }}</textarea></label>{% endif %}
+  {% if p.kind != 'post' and p.sound %}<label>{{ 'عوض کردن موزیک پس‌زمینه' if m.music else 'افزودن موزیک پس‌زمینه' }} <small>(اختیاری؛ بعد از انتخاب «ذخیره» را بزن تا ویدیو با موزیک ساخته شود)</small><input type="file" name="music" accept="audio/*"></label>{% endif %}
+  {% if p.out_type != 'video' %}<label>جایگزینی تصویر با عکس خودت <small>(اختیاری)</small><input type="file" name="image" accept="image/*"></label>
+  {% elif p.user_video %}<label>جایگزینی ویدیو با ویدیوی دیگرت <small>(اختیاری)</small><input type="file" name="video_file" accept="video/*"></label>{% endif %}
+  <div class="row">
+    <button>ذخیره</button>
+    <button class="ghost" formaction="/post/{{ p.id }}/regen/text">متن جدید با AI</button>
+    {% if not p.user_video %}<button class="ghost" formaction="/post/{{ p.id }}/regen/image">{{ 'ویدیوی جدید با AI' if p.out_type == 'video' else 'تصویر جدید با AI' }}</button>{% endif %}
+    {% if p.kind != 'post' %}<button class="ghost" formaction="/post/{{ p.id }}/regen/media">بازسازی ویس و ویدیو</button>{% endif %}
+  </div>
+  <hr style="border:0;border-top:1px solid var(--line);margin:18px 0 4px">
+  <div class="row">
+    <button class="ok" formaction="/post/{{ p.id }}/publish" onclick="return confirm('همین الان منتشر شود؟')">انتشار فوری</button>
+  </div>
+  <label>یا زمان‌بندی <small>(به وقت {{ tz_name }})</small>
+  <div class="row" style="margin:0"><input type="datetime-local" name="scheduled_at" class="ltr" value="{{ sched_value }}" style="flex:1;margin-top:5px">
+  <button class="ghost" formaction="/post/{{ p.id }}/schedule" style="margin-top:5px">زمان‌بندی</button></div></label>
+</form>
+{% else %}
+  <label>کپشن</label><div style="white-space:pre-wrap;margin-top:6px">{{ p.caption or '—' }}</div>
+  {% if p.voice_text %}<label>متن ویس</label><div style="white-space:pre-wrap;margin-top:6px">{{ p.voice_text }}</div>{% endif %}
+{% endif %}
+{% if p.status not in ('generating', 'publishing') %}
+<form method="post" action="/post/{{ p.id }}/delete" onsubmit="return confirm('حذف شود؟ (پستی که منتشر شده از اینستاگرام پاک نمی‌شود)')">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><button class="red">حذف از پنل</button></form>
+{% endif %}
+</div>
+</div>
+{% endblock %}

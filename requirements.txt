@@ -1,0 +1,9 @@
+instagrapi
+# instagrapi برای آپلود ویدیو (ریلز/استوری ویدیویی) به moviepy نیاز دارد (نسخه‌ی ۲.x)
+moviepy>=2.1
+pillow
+requests
+flask
+waitress
+cryptography
+tzdata

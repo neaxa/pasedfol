@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}میلیونیم{% endblock %}
+{% block head %}<style>
+.hero{background:linear-gradient(135deg,#5b4ff5,#b13cc9 55%,#ee5862);color:#fff;border:0}
+.hero h1{margin:0 0 6px;font-size:26px}.hero p{margin:0;opacity:.92}
+.hero .btn,.hero button{background:#fff;color:#5b4ff5}.hero button.off{background:#ffffff26;color:#fff;border:1px solid #fff6}
+.goal{margin-top:14px}.goal .top{display:flex;justify-content:space-between;font-weight:700;font-size:14px}
+.barbg{height:14px;border-radius:99px;background:var(--bg);border:1px solid var(--line);overflow:hidden;margin-top:6px}
+.barfg{height:100%;border-radius:99px;background:linear-gradient(90deg,#5b4ff5,#ee5862)}
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.kpi{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px}
+.kpi .v{font-size:22px;font-weight:800}.kpi small{display:block}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.chip{background:var(--vio-bg);color:var(--vio);border-radius:99px;padding:2px 10px;font-size:13px}
+.plan{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:10px;background:var(--bg)}
+.plan.viral{border-color:#ee5862;box-shadow:0 0 0 3px #ee586222}
+ul.clean{margin:6px 0 0;padding-inline-start:20px}ul.clean li{margin:3px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px}td,th{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}
+th{color:var(--mute);font-weight:600}
+svg.chart{width:100%;height:130px;background:var(--bg);border-radius:12px;border:1px solid var(--line)}
+</style>{% endblock %}
+{% block body %}
+<div class="card hero">
+  <h1>🚀 میلیونیم</h1>
+  <p>کل پیجت را آنالیز می‌کنم: موضوع، بیو، بازدید تک‌تک پست‌ها و ریلزها، روند هر روز، و اینکه ویدیوهای پربازدید حوزه‌ات دقیقاً از چه قلاب، طول، فرمت و هشتگی استفاده کرده‌اند. بعد همه را ترکیب می‌کنم و هر روز محتوایی می‌سازم که هدفش این است:
+  <b>یک پست {{ (m.goal_views)|num }} بازدیدی</b> و <b>{{ (m.goal_followers)|num }} فالوور</b>.</p>
+  <form method="post" action="/million/toggle" style="display:inline"><input type="hidden" name="csrf" value="{{ csrf }}">
+    {% if m.enabled %}<input type="hidden" name="on" value="0"><button class="off">✅ فعال است · غیرفعال کن</button>
+    {% else %}<input type="hidden" name="on" value="1"><button>⚡ فعال‌سازی میلیونیم</button>{% endif %}
+  </form>
+</div>
+
+{% if not ig_ok %}<div class="banner">به اینستاگرام وصل نیستی. <a href="/instagram">اتصال اینستاگرام ←</a></div>{% endif %}
+{% if paused %}<div class="banner">اینستاگرام محدودیت موقت داده؛ کارهای خودکار تا <bdo dir="ltr">{{ ts(paused) }}</bdo> متوقف است.</div>{% endif %}
+{% if m.enabled and missing %}<div class="banner">برای ساخت خودکار محتوا، کلید این بخش‌ها را در <a href="/ai">تنظیمات AI</a> بگذار: {{ missing|join('، ') }}</div>{% endif %}
+
+<div class="card">
+  <div class="row" style="justify-content:space-between;margin-top:-14px">
+    <h2 style="margin:14px 0 0">مسیر رسیدن به هدف</h2>
+    <form method="post" action="/million/analyze"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="ghost" {{ 'disabled' if busy }}>{% if busy %}<span class="spin"></span>در حال آنالیز…{% else %}🔍 همین الان آنالیز کن{% endif %}</button></form>
+  </div>
+  {% if last %}<p class="mute" style="margin:8px 0 0">{% if busy %}<span class="spin"></span>{% endif %}{{ last }}</p>{% endif %}
+  {% if prog.has_data %}
+  <div class="goal"><div class="top"><span>🎯 بهترین بازدید یک پست</span><span class="ltr" dir="ltr">{{ prog.best_views|num }} / {{ prog.goal_views|num }}</span></div>
+    <div class="barbg"><div class="barfg" style="width:{{ [prog.views_pct, 1]|max }}%"></div></div>
+    {% if prog.done_views %}<small>🎉 هدف میلیونی رسید!</small>{% endif %}</div>
+  <div class="goal"><div class="top"><span>👥 فالوور</span><span class="ltr" dir="ltr">{{ prog.followers|num }} / {{ prog.goal_followers|num }}</span></div>
+    <div class="barbg"><div class="barfg" style="width:{{ [prog.followers_pct, 1]|max }}%"></div></div>
+    <small>{% if prog.done_followers %}🎉 هدف فالوور رسید!{% elif prog.per_day is defined %}رشد: {{ prog.per_day }} فالوور در روز{% if prog.eta_days %} · با همین سرعت حدود {{ prog.eta_days }} روز تا هدف{% endif %}{% else %}بعد از دو روز آنالیز، سرعت رشد و زمان تخمینی رسیدن به هدف نشان داده می‌شود.{% endif %}</small></div>
+  {% if pts_f %}<svg class="chart" viewBox="0 0 600 120" preserveAspectRatio="none"><polyline fill="none" stroke="#5b4ff5" stroke-width="3" points="{{ pts_f }}"/></svg>
+  <small>نمودار فالوور {{ series|length }} روز اخیر</small>{% endif %}
+  {% else %}<p class="mute">هنوز آنالیزی انجام نشده. «فعال‌سازی» یا «همین الان آنالیز کن» را بزن.</p>{% endif %}
+</div>
+
+{% if snap %}{% set st = snap.strategy %}{% set d = snap.data %}
+{% if st.error %}<div class="flash bad">{{ st.error }}</div>{% endif %}
+
+<div class="card">
+  <h2>پیج تو <small>· آنالیز {{ ts(snap.ts) }}</small></h2>
+  <div class="kpis">
+    <div class="kpi"><small>پیج</small><div class="v ltr" dir="ltr" style="font-size:17px">@{{ d.profile.username or '—' }}</div></div>
+    <div class="kpi"><small>فالوور</small><div class="v">{{ (d.profile.followers or 0)|num }}</div></div>
+    <div class="kpi"><small>تعداد پست</small><div class="v">{{ (d.profile.media_count or 0)|num }}</div></div>
+    <div class="kpi"><small>انتشار در ۳۰ روز</small><div class="v">{{ d.own.posts_30d or 0 }}</div></div>
+    {% if d.own.trend_pct is defined %}<div class="kpi"><small>روند ۵ پست آخر</small><div class="v" style="color:{{ 'var(--ok)' if d.own.trend_pct >= 0 else 'var(--bad)' }}"><bdo dir="ltr">{{ '+' if d.own.trend_pct >= 0 }}{{ d.own.trend_pct }}%</bdo></div></div>{% endif %}
+    {% if st.score is defined %}<div class="kpi"><small>آمادگی ویرال شدن</small><div class="v">{{ st.score }}/100</div></div>{% endif %}
+  </div>
+  {% if d.profile.bio %}<label>بیو فعلی</label><div class="mute" style="white-space:pre-wrap">{{ d.profile.bio }}</div>{% endif %}
+  {% if st.niche %}<label>موضوع پیج (از نگاه AI)</label><div>{{ st.niche }}</div>{% endif %}
+  {% if st.diagnosis %}<label>تشخیص</label><div>{{ st.diagnosis }}</div>{% endif %}
+  {% if st.trend %}<label>روند</label><div>{{ st.trend }}</div>{% endif %}
+  {% if st.bio_suggestion %}
+  <form method="post" action="/million/bio" onsubmit="return confirm('بیو پیج با این متن عوض شود؟')"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>بیو پیشنهادی <small>(می‌توانی ویرایشش کنی)</small><textarea name="bio" rows="2" maxlength="150">{{ st.bio_suggestion }}</textarea></label>
+    <button class="ghost">این بیو را روی پیج بگذار</button></form>
+  {% endif %}
+</div>
+
+{% if st.plan %}
+<div class="card">
+  <div class="row" style="justify-content:space-between;margin-top:-14px"><h2 style="margin:14px 0 0">برنامه‌ی امروز</h2>
+  <form method="post" action="/million/create"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost">همین برنامه را الان بساز</button></form></div>
+  {% if st.today_focus %}<p style="margin:6px 0 0"><b>تمرکز امروز:</b> {{ st.today_focus }}</p>{% endif %}
+  {% if st.viral_bet %}<div class="plan viral"><b>🎲 شرط ویرال:</b> {{ st.viral_bet.topic }}<br><small>قلاب: «{{ st.viral_bet.hook }}» · فرمت: {{ st.viral_bet.format }}</small><br><small>چرا: {{ st.viral_bet.why }}</small></div>{% endif %}
+  {% for it in st.plan %}
+  <div class="plan {{ 'viral' if it.viral }}"><b>{{ KIND_FA.get(it.kind, it.kind) }}{% if it.viral %} 🔥{% endif %}: {{ it.topic }}</b>
+    {% if it.hook %}<br><small>قلاب: «{{ it.hook }}»</small>{% endif %}
+    {% if it.angle %}<br><small>ساختار: {{ it.angle }}</small>{% endif %}
+    {% if it.cta %}<br><small>دعوت به اقدام: {{ it.cta }}</small>{% endif %}
+  </div>{% endfor %}
+  {% if st.best_times %}<p class="mute" style="margin:10px 0 0">بهترین ساعت انتشار: <bdo dir="ltr">{{ st.best_times|join(' · ') }}</bdo>{% if st.reel_length %} · طول ریلز: {{ st.reel_length }}{% endif %}</p>{% endif %}
+  {% if created %}<label>محتوای ساخته‌شده از این برنامه</label>
+  {% for p in created %}<div class="list-item"><div class="grow t"><a href="/post/{{ p.id }}">{{ KIND_FA[p.kind] }} #{{ p.id }} · {{ p.topic }}</a></div><span class="badge b-{{ p.status }}">{{ STATUS_FA[p.status] }}</span></div>{% endfor %}{% endif %}
+</div>
+{% endif %}
+
+<div class="grid">
+  {% if st.winning_patterns %}<div class="card"><h2>✅ الگوهایی که جواب می‌دهد</h2><ul class="clean">{% for x in st.winning_patterns %}<li>{{ x }}</li>{% endfor %}</ul></div>{% endif %}
+  {% if st.stop_doing %}<div class="card"><h2>⛔ کنار بگذار</h2><ul class="clean">{% for x in st.stop_doing %}<li>{{ x }}</li>{% endfor %}</ul></div>{% endif %}
+  {% if st.hooks %}<div class="card"><h2>🪝 قلاب‌های آماده</h2><ul class="clean">{% for x in st.hooks %}<li>{{ x }}</li>{% endfor %}</ul></div>{% endif %}
+  {% if st.followers_plan %}<div class="card"><h2>👥 نقشه‌ی {{ m.goal_followers|num }} فالوور</h2><ul class="clean">{% for x in st.followers_plan %}<li>{{ x }}</li>{% endfor %}</ul></div>{% endif %}
+</div>
+{% if st.hashtags %}<div class="card"><h2>هشتگ‌های پیشنهادی</h2><div class="chips ltr" dir="ltr">{% for h in st.hashtags %}<span class="chip">#{{ h }}</span>{% endfor %}</div></div>{% endif %}
+
+{% if d.own.top %}
+<div class="card"><h2>پربازدیدترین پست‌های خودت</h2>
+<table><tr><th>نوع</th><th>بازدید</th><th>لایک</th><th>کامنت</th><th>قلاب</th></tr>
+{% for t in d.own.top %}<tr><td>{% if t.code %}<a href="https://www.instagram.com/{{ 'reel' if t.kind == 'reel' else 'p' }}/{{ t.code }}/" target="_blank" rel="noopener noreferrer">{{ KIND_FA.get(t.kind, t.kind) }} ↗</a>{% else %}{{ KIND_FA.get(t.kind, t.kind) }}{% endif %}</td>
+<td>{{ t.views|num }}</td><td>{{ t.likes|num }}</td><td>{{ t.comments|num }}</td><td class="mute">{{ t.hook }}</td></tr>{% endfor %}</table>
+{% if d.own.risers %}<label>📈 پست‌هایی که از آنالیز قبل رشد کرده‌اند</label>
+<table>{% for t in d.own.risers %}<tr><td>{{ KIND_FA.get(t.kind, t.kind) }}</td><td style="color:var(--ok)"><bdo dir="ltr">+{{ t.gain|num }}</bdo></td><td class="mute">{{ t.hook }}</td></tr>{% endfor %}</table>{% endif %}
+{% if d.own.by_hour %}<p class="mute" style="margin:10px 0 0">بهترین ساعت‌ها در پیج خودت: {% for h in d.own.by_hour[:3] %}<bdo dir="ltr">{{ '%02d'|format(h.hour) }}:00</bdo> ({{ h.avg|num }}){% if not loop.last %}، {% endif %}{% endfor %}</p>{% endif %}
+</div>{% endif %}
+
+{% if d.niche.top %}
+<div class="card"><h2>ویدیوهای پربازدید حوزه‌ی تو <small>({{ d.hashtags_scanned|join('، ') }})</small></h2>
+<p class="mute" style="margin:0">میانگین بازدید برترین‌ها: {{ d.niche.avg_views_top|num }} · سهم ریلز: {{ d.niche.reel_share }}%{% if d.niche.reel_duration_avg %} · طول متوسط ریلز: {{ d.niche.reel_duration_avg }} ثانیه{% endif %} · قلاب سؤالی: {{ d.niche.question_hooks }}% · قلاب عددی: {{ d.niche.number_hooks }}%</p>
+<table><tr><th>پیج</th><th>بازدید</th><th>طول</th><th>قلاب</th></tr>
+{% for t in d.niche.top %}<tr><td class="ltr" dir="ltr">{% if t.code %}<a href="https://www.instagram.com/{{ 'reel' if t.kind == 'reel' else 'p' }}/{{ t.code }}/" target="_blank" rel="noopener noreferrer">@{{ t.author }}</a>{% else %}@{{ t.author }}{% endif %}</td>
+<td>{{ t.reach|num }}</td><td>{{ (t.duration ~ 's') if t.duration else '—' }}</td><td class="mute">{{ t.hook }}</td></tr>{% endfor %}</table>
+</div>{% endif %}
+{% endif %}
+
+<form method="post" action="/million/save" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<h2>تنظیمات</h2>
+<div class="grid" style="gap:12px">
+<label>هدف بازدید یک پست<input type="number" name="goal_views" min="1000" value="{{ m.goal_views }}"></label>
+<label>هدف فالوور<input type="number" name="goal_followers" min="100" value="{{ m.goal_followers }}"></label>
+<label>ساعت آنالیز روزانه <small>(به وقت {{ cfg.timezone }})</small><input name="analyze_time" class="ltr" value="{{ m.analyze_time }}"></label>
+<label>محتوای جدید در روز<input type="number" name="posts_per_day" min="1" max="6" value="{{ m.posts_per_day }}"></label>
+</div>
+<label>نوع محتوا <small>(برای ویرال شدن، ریلز مهم‌ترین است)</small></label>
+<div class="seg">{% for k, label in [('reel','ریلز'),('post','پست'),('story','استوری')] %}<label><input type="checkbox" name="kinds" value="{{ k }}" {{ 'checked' if k in m.kinds }}> {{ label }}</label>{% endfor %}</div>
+<label>بعد از ساخت چه شود؟</label>
+<div class="seg">
+<label><input type="radio" name="approve" value="review" {{ 'checked' if m.approve != 'auto' }}> منتظر تأیید من بماند (توصیه‌شده)</label>
+<label><input type="radio" name="approve" value="auto" {{ 'checked' if m.approve == 'auto' }}> سر بهترین ساعت خودکار منتشر شود</label>
+</div>
+<label class="check"><input type="checkbox" name="video" {{ 'checked' if m.video }}> ریلز و استوری با ویدیوی AI (deAPI) ساخته شود</label>
+<label class="check"><input type="checkbox" name="with_voice" {{ 'checked' if m.with_voice }}> ویس هم بساز</label>
+<label class="check"><input type="checkbox" name="sound" {{ 'checked' if m.sound }}> ویدیوها صدا داشته باشند</label>
+<label class="check"><input type="checkbox" name="share_own" {{ 'checked' if share_own }}> هر پست/ریلز جدید خودکار استوری هم بشود <small>(همان تنظیم بخش «کشف و استوری»)</small></label>
+<label class="check"><input type="checkbox" name="competitors" {{ 'checked' if m.competitors }}> ویدیوهای پربازدید حوزه‌ام را هم آنالیز کن</label>
+<label>هشتگ‌های حوزه‌ی تو <small>(اختیاری؛ خالی = از موضوع پیج و پست‌هایت خودکار پیدا می‌شود)</small>
+<textarea name="extra_hashtags" rows="2" class="ltr">{{ m.extra_hashtags|join('\n') }}</textarea></label>
+<label>پیج‌های رقیب/الگو <small>(اختیاری؛ هر خط یک نام کاربری)</small>
+<textarea name="competitor_accounts" rows="2" class="ltr">{{ m.competitor_accounts|join('\n') }}</textarea></label>
+<button>ذخیره</button>
+<p class="hint">هیچ‌کس نمی‌تواند میلیونی شدن را تضمین کند؛ کار این بخش این است که هر روز با داده‌ی واقعی شانس ویرال شدن را بالا ببرد. اگر اتوپایلوت هم روشن باشد، سقف انتشار روزانه بین هر دو مشترک است. با «منتظر تأیید من بماند» شروع کن.</p>
+</form>
+{% endblock %}

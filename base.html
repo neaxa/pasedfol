@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}دستیار اینستاگرام{% endblock %}</title>
+<style>
+:root{--bg:#fafafa;--card:#fff;--ink:#262626;--mute:#737373;--line:#dbdbdb;--accent:#0095f6;--accent-ink:#fff;
+--ok:#12805c;--ok-bg:#e4f6ee;--bad:#ed4956;--bad-bg:#feecee;--warn:#9a5b00;--warn-bg:#fdf3dc;--info:#0074cc;--info-bg:#e6f3fd;
+--vio:#8a3ab9;--vio-bg:#f3e8fa;--shadow:none;--r:10px;
+--ig:linear-gradient(45deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5)}
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font:15px/1.7 system-ui,"Vazirmatn",Tahoma,sans-serif}
+a{color:var(--accent);text-decoration:none}
+/* چیدمان: دسکتاپ = منوی ثابت سمت راست؛ موبایل = نوار بالا با منوی همبرگری */
+.shell{display:flex;min-height:100vh}
+.side{width:248px;flex:none;background:var(--card);border-left:1px solid var(--line);position:sticky;top:0;height:100vh;
+display:flex;flex-direction:column;padding:18px 12px;gap:4px;overflow-y:auto;z-index:30}
+.brand{font-weight:800;white-space:nowrap;padding:4px 12px 14px;font-size:17px}
+.side nav{display:flex;flex-direction:column;gap:3px;flex:1}
+.side nav a{padding:9px 14px;border-radius:12px;color:var(--mute);font-size:14.5px;font-weight:600}
+.side nav a:hover{background:var(--bg);color:var(--ink)}
+.side nav a.on{background:var(--accent);color:var(--accent-ink)}
+.side .logout{margin-top:10px}
+.side .logout button{width:100%;margin:0}
+.content{flex:1;min-width:0}
+.topbar,.scrim{display:none}
+main{max-width:1040px;margin:0 auto;padding:24px 20px 60px}
+@media (max-width:860px){
+.shell{display:block}
+.topbar{display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20;background:var(--card);
+border-bottom:1px solid var(--line);padding:10px 14px}
+.topbar .brand{padding:0;font-size:16px;flex:1}
+.burger{margin:0;padding:8px 11px;font-size:20px;line-height:1;background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.side{position:fixed;top:0;right:0;bottom:0;height:100%;width:min(300px,84vw);transform:translateX(105%);
+transition:transform .22s ease;box-shadow:var(--shadow);border-left:0}
+body.menu-open .side{transform:none}
+.scrim{display:block;position:fixed;inset:0;background:#0008;z-index:25;opacity:0;pointer-events:none;transition:opacity .2s}
+body.menu-open .scrim{opacity:1;pointer-events:auto}
+body.menu-open{overflow:hidden}
+main{padding:18px 14px 60px}
+}
+h1{font-size:22px;margin:0 0 16px}h2{font-size:17px;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;margin-bottom:16px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.grid>.card{margin:0}
+label{display:block;margin-top:12px;font-size:14px;font-weight:600}
+label small,.hint,small{font-weight:400;color:var(--mute);font-size:13px}
+input,select,textarea{width:100%;margin-top:5px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+background:var(--bg);color:var(--ink);font:inherit}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+input[type=checkbox],input[type=radio]{width:auto;margin:0 0 0 6px;vertical-align:middle}
+.check{display:flex;align-items:center;gap:6px;font-weight:500}
+textarea{resize:vertical;min-height:70px}
+.btn,button{display:inline-block;padding:10px 18px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);
+font:inherit;font-weight:700;cursor:pointer;margin-top:14px}
+button.ghost{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+button.red{background:var(--bad-bg);color:var(--bad)}
+button.ok{background:var(--ok-bg);color:var(--ok)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row>*{margin-top:14px}
+.row form{display:contents}
+.flash{padding:12px 14px;border-radius:12px;margin-bottom:16px;font-weight:600}
+.flash.ok{background:var(--ok-bg);color:var(--ok)}.flash.bad{background:var(--bad-bg);color:var(--bad)}
+.banner{background:var(--warn-bg);color:var(--warn);padding:12px 14px;border-radius:12px;margin-bottom:16px}
+.badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12.5px;font-weight:700}
+.b-generating,.b-publishing{background:var(--warn-bg);color:var(--warn)}
+.b-ready{background:var(--info-bg);color:var(--info)}.b-scheduled{background:var(--vio-bg);color:var(--vio)}
+.b-published,.b-on{background:var(--ok-bg);color:var(--ok)}.b-failed,.b-off{background:var(--bad-bg);color:var(--bad)}
+.b-gray{background:var(--bg);color:var(--mute);border:1px solid var(--line)}
+.list-item{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.list-item:last-child{border:0}.list-item .grow{flex:1;min-width:0}
+.list-item .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thumb{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--bg);border:1px solid var(--line);flex:none}
+.preview{width:100%;max-height:520px;object-fit:contain;border-radius:12px;background:#000}
+.pre{background:#0d0e12;color:#d7d9e0;padding:12px;border-radius:10px;overflow:auto;max-height:260px;font:12px/1.6 ui-monospace,monospace;direction:ltr;text-align:left;white-space:pre-wrap}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;
+animation:sp 0.8s linear infinite;vertical-align:-2px;margin-left:6px}@keyframes sp{to{transform:rotate(360deg)}}
+.stat{font-size:26px;font-weight:800}.mute{color:var(--mute)}
+.two{display:grid;gap:16px;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+.seg{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.seg label{margin:0;border:1px solid var(--line);border-radius:10px;padding:8px 14px;cursor:pointer;background:var(--bg);font-weight:600}
+.seg label:has(input:checked) small{color:inherit;opacity:.85}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.ltr{direction:ltr;text-align:left}
+
+/* ظاهر شبیه اینستاگرام: سفید، خاکستری ملایم، دکمه‌ی آبی؛ گرادیان فقط روی لوگو و خط نازک بالای صفحه */
+body::before{content:"";position:fixed;top:0;left:0;right:0;height:3px;background:var(--ig);z-index:50}
+.side{border-left:1px solid var(--line);box-shadow:none}
+.brand{background:var(--ig);-webkit-background-clip:text;background-clip:text;color:transparent}
+.side nav a{color:var(--ink);font-weight:500}
+.side nav a:hover{background:#f2f2f2;color:var(--ink)}
+.side nav a.on{background:#efefef;color:var(--ink);font-weight:800}
+.card{box-shadow:none;border-radius:12px}
+.btn,button{border-radius:8px;font-weight:600}
+button.ghost{background:#efefef;border:0;color:var(--ink)}
+button.ghost:hover{background:#e4e4e4}
+button:not(.ghost):not(.red):not(.ok):hover{background:#1877f2}
+input,select,textarea{background:#fafafa;border-radius:8px}
+input:focus,select:focus,textarea:focus{outline:2px solid #a8d8fb;border-color:#a8d8fb}
+.seg label{background:#fafafa;border-radius:8px}
+.seg label:has(input:checked){background:#e6f3fd;color:#0074cc;border-color:#0095f6}
+.seg label:has(input:checked) small{color:inherit;opacity:.8}
+.burger{background:#efefef!important;color:var(--ink)!important;border:0!important}
+.topbar{margin-top:3px}
+@media (max-width:860px){.side{top:3px}}
+</style>
+{% block head %}{% endblock %}
+</head>
+<body>
+{% if session.get('ok') %}
+<div class="shell">
+<div class="topbar">
+<button type="button" class="burger ghost" id="burger" aria-label="منو" aria-expanded="false" aria-controls="side">☰</button>
+<span class="brand">✦ دستیار اینستاگرام</span>
+</div>
+<div class="scrim" id="scrim"></div>
+<aside class="side" id="side">
+<div class="brand">✦ دستیار اینستاگرام</div>
+<nav>
+{% for href, label in [('/','داشبورد'),('/studio','استودیو'),('/posts','پست‌ها'),('/autopilot','اتوپایلوت'),('/million','🚀 میلیونیم'),('/discover','کشف و استوری'),('/comments','کامنت خودکار'),('/ai','تنظیمات AI'),('/instagram','اتصال اینستاگرام'),('/dm','دایرکت')] %}
+<a href="{{ href }}" class="{{ 'on' if (nav_path == href or (href != '/' and nav_path.startswith(href))) }}">{{ label }}</a>
+{% endfor %}
+</nav>
+<form method="post" action="/logout" class="logout"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost">خروج</button></form>
+</aside>
+<div class="content">
+{% endif %}
+<main>
+{% if flash %}<div class="flash {{ 'ok' if flash.ok else 'bad' }}">{{ flash.msg }}</div>{% endif %}
+{% block body %}{% endblock %}
+</main>
+{% if session.get('ok') %}
+</div></div>
+<script>
+(function(){var b=document.body,bt=document.getElementById('burger'),sc=document.getElementById('scrim');
+function set(o){b.classList.toggle('menu-open',o);bt.setAttribute('aria-expanded',o?'true':'false');bt.textContent=o?'✕':'☰';}
+bt.addEventListener('click',function(){set(!b.classList.contains('menu-open'));});
+sc.addEventListener('click',function(){set(false);});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')set(false);});
+document.querySelectorAll('#side nav a').forEach(function(a){a.addEventListener('click',function(){set(false);});});
+window.addEventListener('resize',function(){if(window.innerWidth>860)set(false);});})();
+</script>
+{% endif %}
+{% if watch %}
+<script>
+(function(){var w={{ watch|tojson }},s0={{ sig|tojson }};
+setInterval(async function(){try{var r=await fetch('/status?watch='+encodeURIComponent(w.join(',')));
+if(!r.ok)return;var j=await r.json();if(j.sig!==s0)location.reload();}catch(e){}},3000);})();
+</script>
+{% endif %}
+</body>
+</html>

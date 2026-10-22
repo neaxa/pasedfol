@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}استودیو{% endblock %}
+{% block head %}<style>
+.opt{border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:10px;background:var(--bg)}
+.opt.off .sub{display:none}
+.opt>.check{font-size:16px;font-weight:700}
+.sub{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+</style>{% endblock %}
+{% block body %}
+<h1>استودیوی محتوا</h1>
+{% if not brand.niche %}<div class="banner">برای کپشن‌های بهتر، اول در «تنظیمات AI» موضوع و لحن پیجت را بنویس.</div>{% endif %}
+<form method="post" enctype="multipart/form-data" class="card">
+<input type="hidden" name="csrf" value="{{ csrf }}">
+
+<h2>۱. چه نوع محتوایی؟</h2>
+<div class="seg">
+  <label><input type="radio" name="kind" value="post" checked> پست</label>
+  <label><input type="radio" name="kind" value="story"> استوری</label>
+  <label><input type="radio" name="kind" value="reel"> ریلز</label>
+</div>
+
+<label>موضوع <small>(مثلاً «۵ نکته برای خواب بهتر». اگر خالی بگذاری و عکس/ویدیو بدهی، AI از روی آن می‌نویسد)</small>
+<textarea name="topic" rows="2" placeholder="درباره‌ی چه چیزی بنویسم؟"></textarea></label>
+
+<h2 style="margin-top:20px">۲. خروجی <small>(هرکدام را تیک بزنی همان ساخته می‌شود؛ اگر هر دو تیک باشد دو مورد جدا ساخته می‌شود)</small></h2>
+
+<div class="opt" id="opt-image">
+  <label class="check"><input type="checkbox" name="make_image" id="make_image" checked onchange="sw()"> 🖼 عکس</label>
+  <div class="sub">
+    <div class="seg">
+      <label><input type="radio" name="image_mode" value="ai" checked onchange="sw()"> ساخت با AI</label>
+      <label><input type="radio" name="image_mode" value="upload" onchange="sw()"> آپلود عکس خودم</label>
+    </div>
+    <div id="up-image" style="display:none"><label>عکس<input type="file" name="image" accept="image/*"></label></div>
+    <small id="hint-reel-img" style="display:none">ریلز باید ویدیو باشد؛ عکس به یک ریلزِ تصویر ثابت تبدیل می‌شود.</small>
+  </div>
+</div>
+
+<div class="opt off" id="opt-video">
+  <label class="check"><input type="checkbox" name="make_video" id="make_video" onchange="sw()"> 🎬 ویدیو</label>
+  <div class="sub">
+    <div class="seg">
+      <label><input type="radio" name="video_source" value="ai" checked onchange="sw()"> ساخت با deAPI</label>
+      <label><input type="radio" name="video_source" value="upload" onchange="sw()"> آپلود ویدیوی خودم</label>
+    </div>
+    <div id="up-video-ai" style="display:none"><label>عکس برای زنده شدن <small>(اختیاری؛ اگر ندهی ویدیو از روی موضوع/توضیح متنی ساخته می‌شود)</small><input type="file" name="video_image" accept="image/*"></label>
+      <small>ویدیو با deAPI ساخته می‌شود (چند دقیقه طول می‌کشد و اعتبار deAPI مصرف می‌کند). کلید را در «تنظیمات AI ← ساخت ویدیو» بگذار.</small></div>
+    <div id="up-video-own" style="display:none"><label>فایل ویدیو <small>(mp4 / mov؛ خودکار ۹:۱۶ و با فرمت مناسب اینستاگرام می‌شود و صدای خودش حفظ می‌شود)</small><input type="file" name="video_file" accept="video/*"></label></div>
+  </div>
+</div>
+
+<label>کپشن <small>(اختیاری؛ اگر خودت بنویسی همان استفاده می‌شود وگرنه AI می‌نویسد)</small>
+<textarea name="caption" rows="3"></textarea></label>
+
+<div id="voice-box" style="display:none">
+<div class="opt" id="opt-sound">
+  <label class="check"><input type="checkbox" name="sound" id="sound" checked onchange="sw()"> 🔊 ویدیو صدا داشته باشد</label>
+  <small id="sound-off-hint" style="display:none">خاموش: ویدیو کاملاً بی‌صدا ساخته می‌شود (حتی صدای خود ویدیو حذف می‌شود و ویس هم ساخته نمی‌شود).</small>
+  <div class="sub">
+    <small>صدای خود ویدیو (ویدیوی آپلودی تو، یا ویدیوی AI اگر مدلش صدا بسازد) حفظ می‌شود؛ ویس و موزیک هم اگر بدهی رویش میکس می‌شوند.</small>
+    <label class="check"><input type="checkbox" name="want_voice"> ویس هم بساز <small>(متن گفتاری را AI می‌نویسد؛ صدای خود ویدیو زیر ویس آرام‌تر می‌شود)</small></label>
+    <label>موزیک پس‌زمینه <small>(اختیاری؛ mp3 / m4a / wav — خودکار هم‌اندازه‌ی ویدیو بریده و آرام محو می‌شود)</small><input type="file" name="music" accept="audio/*"></label>
+  </div>
+</div>
+</div>
+
+<h2 style="margin-top:20px">۳. انتشار</h2>
+<div class="seg">
+  <label><input type="radio" name="publish_mode" value="draft" checked onchange="sw()"> فقط بساز، خودم بررسی می‌کنم</label>
+  <label><input type="radio" name="publish_mode" value="now" onchange="sw()"> ساخت و انتشار فوری</label>
+  <label><input type="radio" name="publish_mode" value="schedule" onchange="sw()"> زمان‌بندی</label>
+</div>
+<div id="when" style="display:none"><label>زمان انتشار <small>(به وقت {{ tz_name }})</small><input type="datetime-local" name="scheduled_at" class="ltr"></label></div>
+
+<button>ساخت محتوا</button>
+</form>
+<script>
+function v(n){var e=document.querySelector('input[name='+n+']:checked');return e?e.value:''}
+function el(i){return document.getElementById(i)}
+function sw(){
+  var kind=v('kind'), isPost=kind=='post';
+  var mi=el('make_image'), mv=el('make_video');
+  // پست فقط عکس دارد
+  el('opt-video').style.display=isPost?'none':'block';
+  if(isPost){mi.checked=true;mi.disabled=true;mv.checked=false}else{mi.disabled=false}
+  el('opt-image').classList.toggle('off',!mi.checked);
+  el('opt-video').classList.toggle('off',!mv.checked);
+  el('up-image').style.display=(mi.checked&&v('image_mode')=='upload')?'block':'none';
+  el('hint-reel-img').style.display=(kind=='reel'&&mi.checked)?'block':'none';
+  el('up-video-ai').style.display=(mv.checked&&v('video_source')=='ai')?'block':'none';
+  el('up-video-own').style.display=(mv.checked&&v('video_source')=='upload')?'block':'none';
+  el('voice-box').style.display=isPost?'none':'block';
+  var snd=el('sound').checked;
+  el('opt-sound').classList.toggle('off',!snd);
+  el('sound-off-hint').style.display=snd?'none':'block';
+  el('when').style.display=v('publish_mode')=='schedule'?'block':'none';
+}
+document.querySelectorAll('input[name=kind]').forEach(function(e){e.addEventListener('change',sw)});sw();
+</script>
+{% endblock %}

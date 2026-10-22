@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}ورود به پنل{% endblock %}
+{% block body %}
+<div style="max-width:380px;margin:12vh auto 0">
+<form method="post" class="card">
+<h1>✦ دستیار اینستاگرام</h1>
+{% if error %}<div class="flash bad">{{ error }}</div>{% endif %}
+{% if panel_email %}
+<label>ایمیل<input type="email" name="email" class="ltr" autocomplete="username" required autofocus></label>
+{% endif %}
+<label>رمز پنل<input type="password" name="password" class="ltr" autocomplete="current-password" required {% if not panel_email %}autofocus{% endif %}></label>
+<button style="width:100%">ورود</button>
+</form>
+</div>
+{% endblock %}

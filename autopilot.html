@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}اتوپایلوت{% endblock %}
+{% block body %}
+<h1>اتوپایلوت</h1>
+<p class="mute">در ساعت‌هایی که تعیین می‌کنی، پنل خودش موضوع انتخاب می‌کند، کپشن و تصویر (و ویس) می‌سازد و یا منتشر می‌کند، یا منتظر تأیید تو می‌ماند.</p>
+<div class="banner">برای کم کردن ریسک محدود شدن حساب: سقف انتشار روزانه، فاصله‌ی بین انتشارها و تأخیر تصادفی رعایت می‌شود. اتوماسیون با ورود نام‌کاربری/رمز خلاف قوانین اینستاگرام است و همیشه کمی ریسک دارد؛ بهتر است با تأیید دستی شروع کنی.</div>
+<form method="post" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<label class="check"><input type="checkbox" name="enabled" {{ 'checked' if ap.enabled }}> اتوپایلوت روشن باشد</label>
+
+<label>ساعت‌های ساخت محتوا <small>(به وقت {{ cfg.timezone }}، با فاصله یا ویرگول؛ مثال: 10:00 19:30)</small>
+<input name="times" class="ltr" value="{{ ap.times|join(' ') }}"></label>
+
+<label>نوع محتوا <small>(اگر چند مورد بزنی به نوبت ساخته می‌شود)</small></label>
+<div class="seg">
+{% for k, label in [('post','پست'),('story','استوری'),('reel','ریلز')] %}
+<label><input type="checkbox" name="kinds" value="{{ k }}" {{ 'checked' if k in ap.kinds }}> {{ label }}</label>{% endfor %}
+</div>
+
+<label>طول فیلم <small>(برای استوری و ریلز)</small></label>
+<div class="seg">
+<label><input type="radio" name="length" value="short" {{ 'checked' if ap.length != 'long' }}> 🎬 فیلم کوتاه <small>(حالت عادی)</small></label>
+<label><input type="radio" name="length" value="long" {{ 'checked' if ap.length == 'long' }}> 🎞️ فیلم بلند</label>
+</div>
+<div id="longbox" style="display:none">
+<label>مدت فیلم بلند</label>
+<div class="seg">
+<label><input type="radio" name="long_seconds" value="20" {{ 'checked' if ap.long_seconds != 30 }}> ۲۰ ثانیه <small>(۲ کلیپ)</small></label>
+<label><input type="radio" name="long_seconds" value="30" {{ 'checked' if ap.long_seconds == 30 }}> ۳۰ ثانیه <small>(۳ کلیپ)</small></label>
+</div>
+<small style="display:block;margin-top:6px">فیلم بلند هوشمند ساخته می‌شود: AI یک کاراکتر ثابت و یک داستان پیوسته می‌نویسد، چند کلیپ ۱۰ ثانیه‌ای با صدا می‌سازد (هر کلیپ از آخرین فریم قبلی شروع می‌شود تا کاراکتر و صحنه ثابت بماند)، بعد همه را کنار هم می‌چسباند و یک ویس واحد رویش می‌گذارد. این حالت خودبه‌خود «ساخت ویدیو با deAPI» را روشن می‌گیرد و چند برابر گران‌تر و کندتر از فیلم کوتاه است. روی پست اثری ندارد.</small>
+</div>
+
+<label>فهرست موضوع‌ها <small>(هر خط یک موضوع، به نوبت استفاده می‌شود. خالی = AI خودش ایده‌ی تازه می‌دهد)</small>
+<textarea name="topics" rows="6">{{ ap.topics|join('\n') }}</textarea></label>
+
+<label class="check"><input type="checkbox" name="video" {{ 'checked' if ap.video }}> ساخت ویدیو با deAPI <small>(برای استوری و ریلز؛ گران‌تر و کندتر)</small></label>
+<small style="display:block;margin:-4px 0 10px">خاموش (حالت عادی): پست و استوری فقط <b>عکس</b> ساخته می‌شوند، بدون حرکت و بدون تبدیل به ویدیو. روشن: استوری و ریلز ویدیوی deAPI می‌شوند. (ریلز چون در اینستاگرام باید ویدیو باشد، در حالت عادی از عکسِ ثابت ساخته می‌شود.)</small>
+<label class="check"><input type="checkbox" name="with_voice" {{ 'checked' if ap.with_voice }}> ویس هم بساز <small>(برای ریلز؛ برای استوری فقط وقتی «ساخت ویدیو با deAPI» روشن است، وگرنه استوری عکسِ ساده می‌ماند)</small></label>
+
+<label class="check"><input type="checkbox" name="sound" {{ 'checked' if ap.sound }}> ویدیوها صدا داشته باشند <small>(خاموش = ویدیوی کاملاً بی‌صدا؛ روشن = صدای خود ویدیوی AI اگر مدلش صدا بسازد + ویس)</small></label>
+
+<label>بعد از ساخت چه شود؟</label>
+<div class="seg">
+<label><input type="radio" name="approve" value="review" {{ 'checked' if ap.approve != 'auto' }}> منتظر تأیید من بماند (توصیه‌شده)</label>
+<label><input type="radio" name="approve" value="auto" {{ 'checked' if ap.approve == 'auto' }}> خودکار منتشر شود</label>
+</div>
+
+<div class="grid" style="gap:12px">
+<label>حداقل فاصله‌ی بین دو انتشار (دقیقه)<input type="number" name="min_gap" min="1" max="720" value="{{ pub.min_gap_minutes }}"></label>
+<label>سقف انتشار در روز<input type="number" name="max_per_day" min="1" max="20" value="{{ pub.max_per_day }}"></label></div>
+<button>ذخیره</button>
+</form>
+<script>
+(function(){var box=document.getElementById('longbox');
+function sync(){var r=document.querySelector('input[name=length]:checked');box.style.display=(r&&r.value==='long')?'block':'none';}
+document.querySelectorAll('input[name=length]').forEach(function(e){e.addEventListener('change',sync);});sync();})();
+</script>
+<form method="post" action="/autopilot/run-now" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<h2>آزمایش</h2><small>همین الان یک پست با تنظیمات بالا ساخته می‌شود تا نتیجه را ببینی.</small><br>
+<button class="ghost">ساخت یک نمونه‌ی آزمایشی</button></form>
+{% endblock %}

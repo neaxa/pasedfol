@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}پست‌ها{% endblock %}
+{% block body %}
+<div class="row" style="justify-content:space-between"><h1 style="margin:14px 0 0">پست‌ها</h1><a class="btn" href="/studio">✦ محتوای جدید</a></div>
+<div class="seg" style="margin:14px 0">
+  <a href="/posts"><span class="badge {{ 'b-ready' if not st else 'b-gray' }}">همه</span></a>
+  {% for k, v in STATUS_FA.items() %}<a href="/posts?status={{ k }}"><span class="badge {{ 'b-' ~ k if st == k else 'b-gray' }}">{{ v }}</span></a>{% endfor %}
+</div>
+<div class="card">
+{% for p in rows %}
+<a class="list-item" href="/post/{{ p.id }}" style="color:inherit">
+  {% if p.status != 'generating' %}<img class="thumb" loading="lazy" src="/media/{{ p.id }}/image.jpg" alt="" onerror="this.style.visibility='hidden'">{% else %}<span class="thumb"></span>{% endif %}
+  <div class="grow"><div class="t">{{ p.topic or (p.caption[:70] if p.caption else '(بدون موضوع)') }}</div>
+  <small>{{ KIND_FA[p.kind] }} · {{ ts(p.created) }}{% if p.source == 'autopilot' %} · اتوپایلوت{% endif %}{% if p.status == 'scheduled' %} · انتشار: {{ ts(p.scheduled_at) }}{% endif %}</small>
+  {% if p.status == 'failed' and p.error %}<div><small style="color:var(--bad)">{{ p.error[:120] }}</small></div>{% endif %}</div>
+  <span class="badge b-{{ p.status }}">{% if p.status in ('generating','publishing') %}<span class="spin"></span>{% endif %}{{ STATUS_FA[p.status] }}</span>
+</a>
+{% else %}<small>پستی نیست.</small>{% endfor %}
+</div>
+{% endblock %}

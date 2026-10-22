@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}اتصال اینستاگرام{% endblock %}
+{% block body %}
+<h1>اتصال اینستاگرام</h1>
+
+{% if has_session and login.state in ('idle','done') %}
+<div class="card"><h2><span class="badge b-on">وصل است</span> {% if username %}<bdo dir="ltr">@{{ username }}</bdo>{% endif %}</h2>
+<p class="mute">فایل session ذخیره شده است. رمز عبورت هیچ‌جا ذخیره نمی‌شود.</p>
+<form method="post" action="/ig/reset" onsubmit="return confirm('Session حذف شود؟')"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="red">خروج از اینستاگرام و حذف session</button></form></div>
+
+{% elif login.state in ('idle','error') or (not has_session and login.state=='done') %}
+{% if login.state=='error' %}<div class="flash bad">{{ login.message }}</div>{% endif %}
+<div class="banner">اینستاگرام ورود از سرور (آی‌پی دیتاسنتر) را اغلب مشکوک می‌بیند و کد تأیید می‌خواهد. اگر ورود با رمز جواب نداد، از روش دوم (sessionid) استفاده کن. با اتوماسیون غیررسمی همیشه کمی ریسک محدود شدن حساب هست.</div>
+<div class="grid">
+<form method="post" action="/ig/login" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<h2>روش ۱: نام کاربری و رمز</h2>
+<label>نام کاربری اینستاگرام <small>(نام کاربری، نه ایمیل؛ ورود با ایمیل معمولاً خطا می‌دهد)</small><input name="username" class="ltr" autocomplete="off"></label>
+<label>رمز عبور<input name="password" type="password" class="ltr" autocomplete="off"></label>
+<small>اگر اینستاگرام کد دومرحله‌ای یا کد تأیید بخواهد، همین‌جا از تو می‌پرسد.</small>
+<button>ورود</button></form>
+
+<form method="post" action="/ig/login" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<h2>روش ۲: sessionid مرورگر</h2>
+<p class="mute" style="margin-top:0">در مرورگر لپ‌تاپت وارد instagram.com شو، بعد DevTools ← Application ← Cookies ← مقدار <span class="ltr">sessionid</span> را کپی کن.</p>
+<label>sessionid<input name="sessionid" type="password" class="ltr" autocomplete="off"></label>
+<button>اتصال با sessionid</button></form>
+</div>
+{% if proxy_set %}<small>پروکسی (IG_PROXY) فعال است.</small>{% else %}<small>نکته: اگر مرتب چالش امنیتی می‌گیری، یک پروکسی ثابت (ترجیحاً residential) را در متغیر محیطی IG_PROXY بگذار.</small>{% endif %}
+
+{% elif login.state in ('starting','sending','verifying') %}
+<div class="card"><span class="spin"></span> در حال انجام… <small>(صفحه خودکار به‌روز می‌شود)</small>
+<form method="post" action="/ig/cancel"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost">لغو</button></form></div>
+
+{% elif login.state in ('need_code','need_password') %}
+<form method="post" action="/ig/code" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<label>{{ 'کد تأیید (اپ Authenticator، پیامک یا ایمیل)' if login.state=='need_code' else 'رمز' }}
+<input name="value" class="ltr" autocomplete="off" required autofocus {% if login.state=='need_password' %}type="password"{% endif %}></label>
+<button>تأیید</button></form>
+<form method="post" action="/ig/cancel"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost">لغو</button></form>
+{% endif %}
+
+{% if log %}<div class="card"><h2>لاگ ورود</h2><div class="pre">{{ log }}</div></div>{% endif %}
+{% endblock %}

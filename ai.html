@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}تنظیمات AI{% endblock %}
+{% block body %}
+<h1>تنظیمات هوش مصنوعی</h1>
+<p class="mute">برای هر بخش جداگانه انتخاب کن از کدام شرکت استفاده شود و کلیدش را بگذار. کلیدها رمزنگاری‌شده ذخیره می‌شوند و دوباره نمایش داده نمی‌شوند.</p>
+
+<div class="card" id="brand">
+<h2>اطلاعات پیج (روی کیفیت کپشن‌ها اثر مستقیم دارد)</h2>
+<form method="post" action="/ai/brand"><input type="hidden" name="csrf" value="{{ csrf }}">
+<label>موضوع و حوزه‌ی پیج<textarea name="niche" rows="2" placeholder="مثلاً: آموزش آشپزی سالم برای افراد پرمشغله">{{ cfg.brand.niche }}</textarea></label>
+<label>لحن<input name="tone" value="{{ cfg.brand.tone }}" placeholder="صمیمی و کمی طنز / رسمی و تخصصی / ..."></label>
+<label>توضیحات بیشتر <small>(مخاطب، کلمات ممنوع، فراخوان ثابت، آیدی پیج و ...)</small><textarea name="extra" rows="2">{{ cfg.brand.extra }}</textarea></label>
+<div class="grid" style="gap:12px">
+<label>زبان محتوا<select name="language"><option value="fa" {{ 'selected' if cfg.language=='fa' }}>فارسی</option><option value="en" {{ 'selected' if cfg.language=='en' }}>English</option></select></label>
+<label>منطقه‌ی زمانی<input name="timezone" class="ltr" value="{{ cfg.timezone }}"></label></div>
+<button>ذخیره</button></form></div>
+
+{% for s in slots %}
+{% set c = cfg.ai[s] %}
+<div class="card" id="{{ s }}">
+<h2>{{ slot_labels[s] }} {% if c.api_key %}<span class="badge b-on">کلید ذخیره شده</span>{% elif c.provider == 'custom' %}<span class="badge b-gray">بدون کلید</span>{% else %}<span class="badge b-off">بدون کلید</span>{% endif %}
+{% if s in cfg._unreadable %}<span class="badge b-off">کلید خوانده نشد؛ دوباره وارد کن</span>{% endif %}</h2>
+<form method="post" action="/ai/save/{{ s }}" id="f-{{ s }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+<div class="grid" style="gap:12px">
+<label>شرکت / سرویس
+<select name="provider" onchange="hint(this)">
+{% for p in slot_providers[s] %}<option value="{{ p }}" {{ 'selected' if c.provider == p }}>{{ providers[p].label }}</option>{% endfor %}</select></label>
+{% if s in multi_slots and c.provider == 'deapi' %}
+<label style="grid-column:1/-1">کلیدهای deAPI <small>(هر خط یک کلید؛ هنگام ساخت، اول کلیدها تست می‌شوند و با اولین کلید سالم کار انجام می‌شود)</small>
+<textarea name="api_key" class="ltr" rows="3" autocomplete="off" spellcheck="false" placeholder="{{ 'برای نگه‌داشتن کلیدهای فعلی خالی بگذار؛ کلید تازه را اینجا بنویس' if c.api_key else 'کلیدها را اینجا بچسبان، هر خط یکی' }}"></textarea></label>
+<label>با ذخیره، کلیدهای نوشته‌شده…<select name="key_mode"><option value="add">به کلیدهای قبلی اضافه شود</option><option value="replace">جای همه‌ی کلیدهای قبلی بنشیند</option></select></label>
+{% else %}
+<label>کلید API<input type="password" name="api_key" class="ltr" autocomplete="off" placeholder="{{ 'برای نگه‌داشتن کلید فعلی خالی بگذار' if c.api_key else 'کلید را اینجا بچسبان' }}"></label>
+{% endif %}
+<label>نام مدل <small>(خالی = پیش‌فرض)</small><input name="model" class="ltr" value="{{ c.model }}" data-defaults='{{ model_defaults[s]|tojson }}' placeholder=""></label>
+{% if s == 'video' %}<label>طول ویدیو (ثانیه، ۲ تا ۱۰)<input type="number" name="seconds" min="2" max="10" value="{{ c.seconds or 5 }}"></label>{% endif %}
+{% if s == 'voice' %}<label>صدا <small>(نام صدا؛ در ElevenLabs شناسه‌ی صدا)</small><input name="voice" class="ltr" value="{{ c.voice }}" placeholder="alloy / Kore / ..."></label>{% endif %}
+<label>آدرس API <small>(فقط برای «آدرس دلخواه»)</small><input name="base_url" class="ltr" value="{{ c.base_url }}" placeholder="https://api.groq.com/openai/v1"></label>
+</div></form>
+{% if s in multi_slots and c.provider == 'deapi' and key_rows[s] %}
+<div style="margin-top:10px"><small>کلیدهای ذخیره‌شده ({{ key_rows[s]|length }}):</small>
+{% for k in key_rows[s] %}<div class="list-item" style="padding:6px 0"><span class="ltr" style="font-family:ui-monospace,monospace">{{ loop.index }}. {{ k.tail }}</span>
+{% if k.problem %}<span class="badge b-off" title="{{ k.problem }}">مشکل‌دار</span><small class="grow ltr" style="text-align:left">{{ k.problem[:90] }}</small>{% else %}<span class="grow"></span>{% endif %}
+<form method="post" action="/ai/key-remove/{{ s }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="idx" value="{{ loop.index0 }}"><button class="red" style="margin:0;padding:4px 12px">حذف</button></form></div>{% endfor %}</div>
+{% endif %}
+<div class="row"><button form="f-{{ s }}">ذخیره</button>
+<form method="post" action="/ai/test/{{ s }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="ghost" {{ '' if (c.api_key or c.provider == 'custom') else 'disabled' }}>تست اتصال</button></form></div>
+{% if s == 'image' %}<small>تست تصویر یک تصویر کوچک واقعاً می‌سازد و از اعتبار کلید مصرف می‌کند.</small>{% endif %}
+{% if s == 'video' %}<small>برای استوری و ریلز با گزینه‌ی «ویدیوی AI» استفاده می‌شود. کلید را از deapi.ai بگیر. اگر عکس بدهی همان عکس زنده می‌شود وگرنه از روی متن ساخته می‌شود. اگر چند کلید بگذاری، هنگام ساخت کلیدها به ترتیب تست می‌شوند و کلیدی که معلق/نامعتبر/بی‌اعتبار باشد (مثل «HTTP 403: Client account is suspended») کنار می‌رود و کلید بعدی استفاده می‌شود. «تست اتصال» همه‌ی کلیدها را جدا تست می‌کند و ویدیو نمی‌سازد (اعتبار مصرف نمی‌شود).</small>{% endif %}
+{% if s == 'voice' %}<small>ویس فقط برای استوری و ریلز استفاده می‌شود (اینستاگرام ویس روی پست فید ندارد).</small>{% endif %}
+</div>
+{% endfor %}
+
+<script>
+function fill(){document.querySelectorAll('input[name=model]').forEach(function(i){
+var sel=i.closest('form').querySelector('select[name=provider]');var d=JSON.parse(i.dataset.defaults||'{}');
+i.placeholder=d[sel.value]||'نام مدل را وارد کن';});}
+function hint(){fill()}fill();
+</script>
+{% endblock %}

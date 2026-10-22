@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% macro post_row(p) %}
+<a class="list-item" href="/post/{{ p.id }}" style="color:inherit">
+  {% if p.status != 'generating' %}<img class="thumb" loading="lazy" src="/media/{{ p.id }}/image.jpg" alt="" onerror="this.style.visibility='hidden'">{% else %}<span class="thumb"></span>{% endif %}
+  <div class="grow"><div class="t">{{ p.topic or (p.caption[:60] if p.caption else '(بدون موضوع)') }}</div>
+  <small>{{ KIND_FA[p.kind] }}{% if p.scheduled_at and p.status == 'scheduled' %} · {{ ts(p.scheduled_at) }}{% endif %}</small></div>
+  <span class="badge b-{{ p.status }}">{{ STATUS_FA[p.status] }}</span>
+</a>
+{% endmacro %}
+{% block body %}
+<h1>داشبورد</h1>
+{% if cfg._unreadable %}<div class="banner">کلیدهای API ذخیره‌شده خوانده نشد، چون رمز پنل (PANEL_PASSWORD) عوض شده. کلیدها را در «تنظیمات AI» دوباره وارد کن.</div>{% endif %}
+{% if ig_expired %}<div class="banner">نشست اینستاگرام منقضی شده یا اینستاگرام تأیید هویت خواسته است. از «اتصال اینستاگرام» دوباره وارد شو.</div>{% endif %}
+
+<div class="grid" style="margin-bottom:16px">
+  <div class="card"><div class="mute">اینستاگرام</div>
+    {% if ig_connected %}<div class="stat"><span class="badge b-on">وصل است</span></div><small>{% if username %}<bdo dir="ltr">@{{ username }}</bdo>{% endif %}</small>
+    {% else %}<div class="stat"><span class="badge b-off">وصل نیست</span></div><div><a href="/instagram">اتصال اینستاگرام ←</a></div>{% endif %}</div>
+  <div class="card"><div class="mute">کلیدهای AI</div>
+    {% for s, ok in slots.items() %}<div><span class="badge {{ 'b-on' if ok else 'b-off' }}">{{ 'آماده' if ok else 'بدون کلید' }}</span> {{ slot_labels[s] }}</div>{% endfor %}
+    <div style="margin-top:6px"><a href="/ai">تنظیمات AI ←</a></div></div>
+  <div class="card"><div class="mute">اتوپایلوت</div>
+    <div class="stat"><span class="badge {{ 'b-on' if cfg.autopilot.enabled else 'b-gray' }}">{{ 'روشن' if cfg.autopilot.enabled else 'خاموش' }}</span></div>
+    {% if cfg.autopilot.enabled %}<small>ساعت‌ها: {{ cfg.autopilot.times|join('، ') }}</small>{% endif %}
+    <div><a href="/autopilot">تنظیم اتوپایلوت ←</a></div>
+    <div style="margin-top:8px" class="mute">ربات دایرکت: <span class="badge {{ 'b-on' if bot_on else 'b-gray' }}">{{ 'روشن' if bot_on else 'خاموش' }}</span></div></div>
+</div>
+
+{% if review %}
+<div class="card"><h2>در انتظار تأیید شما ({{ review|length }})</h2>
+{% for p in review %}{{ post_row(p) }}{% endfor %}</div>
+{% endif %}
+
+<div class="grid">
+  <div class="card"><h2>صف انتشار</h2>
+    {% for p in upcoming %}{{ post_row(p) }}{% else %}<small>پست زمان‌بندی‌شده‌ای نیست.</small>{% endfor %}</div>
+  <div class="card"><h2>آخرین پست‌ها</h2>
+    {% for p in recent %}{{ post_row(p) }}{% else %}<small>هنوز پستی نساخته‌ای.</small>{% endfor %}
+    <div class="row"><a class="btn" href="/studio">✦ ساخت محتوای جدید</a><a href="/posts">همه‌ی پست‌ها ←</a></div></div>
+</div>
+{% endblock %}
